@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>audiocontext</title>
+    <style>
+        body {
+            color: #fff
+        }
+
+        #rst {
+            display: flex;
+            align-items: center;
+            height: 500px;
+            justify-content: space-around;
+        }
+    </style>
+</head>
+<body>
+    <button id="btn">播放</button>
+    <div id="process"></div>
+    <div id="rst"></div>
+    <script>
+        const audioContext = new AudioContext();
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+
+        const msg = document.getElementById('btn');
+        var total = 0;
+        const pi = '3.1415926'
+        var player = null;
+        var gbuffer;
+        async function play() {
+            msg.innerHTML = '音频加载中';
+            const res = await fetch('/public/domec.mp3');
+            const arraybuffer = await res.arrayBuffer();
+            const audioBuffer = await audioContext.decodeAudioData(arraybuffer);
+            const source = audioContext.createBufferSource();
+            source.connect(audioContext.destination); //连接上实例
+            source.connect(analyser);
+            source.buffer = audioBuffer;
+            gbuffer = audioBuffer;
+            source.start();
+            duration = source.buffer.duration;
+            msg.innerHTML = '音频加载完成，开始播放';
+            msg.disabled = true;
+            showProcess();
+        }
+
+        function showBuffer() {
+            let arr = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(arr);
+
+            let pe = ''
+            for (let i = 0; i < pi.length; i++) {
+                pe +=
+                    `<span style="color:rgb(${parseInt(arr[10])},${parseInt(arr[i]/5)},${parseInt(arr[i])}); transform:scale(${arr[i*13]/36})">${pi[i]}</span>`
+            };
+            document.getElementById('rst').innerHTML = pe
+        }
+
+        function showProcess() {
+            document.getElementById('process').innerHTML = audioContext.currentTime.toFixed(2) + '/' + duration;
+            showBuffer();
+            if (audioContext.currentTime == duration) {
+                cancelAnimationFrame(player)
+            } else {
+                player = requestAnimationFrame(showProcess);
+            }
+        }
+
+        document.getElementById('btn').addEventListener('click', play, false);
+    </script>
+</body>
+</html>
